@@ -2,84 +2,70 @@
 #define ASOBI_PROPERTY_DETAIL
 
 #include <type_traits>
-#include "../type_operation.hpp"
 #include "../helper.hpp"
-
-
-int a = 0;	// テスト用
 
 namespace asobi {
 
-namespace options {
+// accessor
+namespace ac {
 	struct get {};
 	struct set {};
 }
 
 namespace detail {
-	// 非アクセスプロパティ(基底クラス)
-	template <class T>
-	class none_options_property {
-	protected: // member variable
-		T* m_pvalue;
-	public: // constructor, destructor
-		none_options_property() : m_pvalue(nullptr) {};
-		none_options_property(none_options_property& other) = delete;
-		none_options_property(none_options_property&& other) = delete;
-		none_options_property(T& lvalue) : m_pvalue(&lvalue) {}
-		virtual ~none_options_property() = default;
-	};
 
-	// getオプション付きプロパティ
-	template <class T>
-	class get_options_property : virtual public none_options_property<T> {
-	public: // constructor, destructor
-		using none_options_property<T>::none_options_property;
-	public: // functions
-		inline const T& get() const { return *(this->m_pvalue); }
-		inline operator const T& () const { return *(this->m_pvalue); }
-	};
+// 非アクセスプロパティ（基底クラス）
+template <class T>
+class none_access_property {
+protected:
+	T* _object;
+public:
+	none_access_property() : _object(nullptr) {}
+	none_access_property(T& object) : _object(&object) {}
+	none_access_property(T&& object) : _object(&object) {}
+	virtual ~none_access_property() = default;
+};
 
-	// setオプション付きプロパティ
-	template <class T>
-	class set_options_property : virtual public none_options_property<T> {
-	public: // constructor, destructor
-		using none_options_property<T>::none_options_property;
-	public: // functions
-		inline auto& set(const T& value) { *(this->m_pvalue) = value; return *this; }
-		inline auto& set(T&& value) { *(this->m_pvalue) = std::move(value); return *this; }
-		inline auto& operator =(const T& value) { *(this->m_pvalue) = value; return *this; }
-		inline auto& operator =(T&& value) { *(this->m_pvalue) = std::move(value); return *this; }
-		inline auto& operator +=(T&& value) { *(this->m_pvalue) += value; return *this; }
-		inline auto& operator +=(const T& value) { *(this->m_pvalue) += value; return *this; }
-		inline auto& operator -=(T&& value) { *(this->m_pvalue) -= value; return *this; }
-		inline auto& operator -=(const T& value) { *(this->m_pvalue) -= value; return *this; }
-		inline auto& operator *=(T&& value) { *(this->m_pvalue) *= value; return *this; }
-		inline auto& operator *=(const T& value) { *(this->m_pvalue) *= value; return *this; }
-		inline auto& operator /=(T&& value) { *(this->m_pvalue) /= value; return *this; }
-		inline auto& operator /=(const T& value) { *(this->m_pvalue) /= value; return *this; }
-		inline auto& operator |=(T&& value) { *(this->m_pvalue) |= value; return *this; }
-		inline auto& operator |=(const T& value) { *(this->m_pvalue) |= value; return *this; }
-		inline auto& operator &=(T&& value) { *(this->m_pvalue) &= value; return *this; }
-		inline auto& operator &=(const T& value) { *(this->m_pvalue) &= value; return *this; }
-		inline auto& operator ^=(T&& value) { *(this->m_pvalue) ^= value; return *this; }
-		inline auto& operator ^=(const T& value) { *(this->m_pvalue) ^= value; return *this; }
-	};
+// get accessorプロパティ
+template <class T>
+class get_access_property : virtual public none_access_property<T> {
+public:
+	using none_access_property<T>::none_access_property;
+public:
+	inline const T& get() const { return *this->_object; }
+	inline operator const T& () const { return *this->_object; }
+};
 
-	// getがあるか
-	template<class T, class... Options>
-	struct has_get : public std::conditional<find_type<options::get, Options...>::value, get_options_property<T>, nothing>::type {};
+// set accessorプロパティ
+template <class T>
+class set_access_property : virtual public none_access_property<T> {
+public:
+	using none_access_property<T>::none_access_property;
+public:
+	inline auto& set(const T& object) {*this->_object = object; return *this;}
+	inline auto& set(T&& object) {*this->_object = std::move(object); return *this;}
+	inline auto& operator =(const T& object) {*this->_object = object; return *this;}
+	inline auto& operator =(T&& object) {*this->_object = std::move(object); return *this;}
+};
 
-	// setがあるか
-	template<class T, class... Options>
-	struct has_set : public std::conditional<find_type<options::set, Options...>::value, set_options_property<T>, nothing>::type {};
+// accessor型ならそれに対応したものを、そうでないならnothing型を返す
+template <class T, class Accessor>
+struct get_accessor {
+	using type = typename std::conditional<std::is_same<Accessor, ac::get>::value, get_access_property<T>,
+		typename std::conditional<std::is_same<Accessor, ac::set>::value, set_access_property<T>, nothing>::type>::type;
+};
 
-	// propertyが継承するもの
-	template <class T, class... Options>
-	struct property_options
-		: public has_get<T, Options...>,
-		  public has_set<T, Options...>
-	{};
+template <class T, class Accessor>
+struct wrap_get_accessor : public get_accessor<T, Accessor>::type {};
 
-} // namespace detail
+template <class T, class Accessor>
+struct wrap_get_accessor2 : public get_accessor<T, Accessor>::type {};
 
+template <class T, class First = nothing, class Second = nothing>
+class property_options :
+	public wrap_get_accessor<T, First>,
+	public wrap_get_accessor2<T, Second>
+{};
+
+}// namespace detail
 } // namespace asobi

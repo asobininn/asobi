@@ -3,17 +3,21 @@
 
 #include "property/property_detail.hpp"
 
-#define GET_OP asobi::options::get
-#define SET_OP asobi::options::set
-#define FULL_OP asobi::options::get, asobi::options::set
-
 namespace asobi {
 
-// property
-template <class T, class... Options>
-class property final : virtual public detail::none_options_property<T>, public detail::property_options<T, Options...> {
-public:
-	using detail::none_options_property<T>::none_options_property;
+/*
+property
+ getter, setterを自動生成する
+ First, Secondにアクセサを指定する（省略可）
+ アクセサ
+  asobi::ac::get・・・オブジェクトへの読込みを許可
+  asobi::ac::set・・・オブジェクトへの書込みを許可
+*/
+template <class T, class First = nothing, class Second = nothing>
+class property
+	: virtual public detail::none_access_property<T>
+	, public detail::property_options<T, First, Second> {
+	using detail::none_access_property<T>::none_access_property;
 };
 
 } // namespace asobi
