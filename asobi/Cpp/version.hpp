@@ -3,6 +3,6 @@
 
 namespace asobi {
 
-constexpr auto VERSION = "2020_4_21";
+constexpr auto VERSION = "2020_4_25";
 
 } // namespace asobi

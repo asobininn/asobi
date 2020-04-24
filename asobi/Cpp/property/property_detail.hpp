@@ -47,6 +47,8 @@ public:
 	inline auto& set(T&& object) {*this->_object = std::move(object); return *this;}
 	inline auto& operator()(const T& object) { *this->_object = object; return *this; }
 	inline auto& operator()(T&& object) { *this->_object = object; return *this; }
+	inline auto& add(const T& object) {*this->_object += object; return *this;}
+	inline auto& add(T&& object) {*this->_object += std::move(object); return *this;}
 };
 
 template <class T, class Accessor>
